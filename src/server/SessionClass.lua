@@ -62,11 +62,10 @@ function session:LoadTyping(rowAmt, rowRequested)
                 if (wordLength + #object) > self.LettersPerRow then
                     break
                 end
-                for _,v in ipairs(word:split("")) do
+                for i,v in ipairs(word:split("")) do
                     self.letterIndexArr[#self.letterIndexArr+1] = v
                     object[#object+1] = v
                 end
-                print(self.letterIndexArr[#self.letterIndexArr])
                 -- wait(0.1) -- just in case loop is infinite
             end
             self.lettersArrByRow[#self.lettersArrByRow+1] = object

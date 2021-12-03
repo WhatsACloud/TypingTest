@@ -6,6 +6,35 @@ local plrGui = plr:WaitForChild("PlayerGui")
 local sharedVariables = require(RS.Common.SharedVariables)
 local TS = game:GetService("TweenService")
 local reqLetterRemoteFunc = RS.RE.RequestLetters
+local lettersPerRowVar
+
+local function getDictLength(dict)
+    local amt = 0
+    for i,v in pairs(dict) do
+        amt = amt + 1
+    end
+    return amt
+end
+
+local function getHighestElement(frame)
+    local highestValue = 0
+    for i,v in pairs(frame:GetChildren()) do
+        if tonumber(v.Name) > highestValue then
+            highestValue = tonumber(v.Name)
+        end
+    end
+    return highestValue
+end
+
+local function getLowestElement(frame)
+    local lowestValue = 1000000000
+    for i,v in pairs(frame:GetChildren()) do
+        if tonumber(v.Name) < lowestValue then
+            lowestValue = tonumber(v.Name)
+        end
+    end
+    return lowestValue
+end
 
 function guiEr.MakeRootFrame(parent, rootPosition)
     local rootFrame = Instance.new("Frame", parent)
@@ -16,13 +45,22 @@ function guiEr.MakeRootFrame(parent, rootPosition)
     return rootFrame
 end
 
-function guiEr.MakeFrameForLetters(currentRow, rootFrame)
+function guiEr.MakeFrameForLetters(currentRow, rootFrame, oldRow, specificRow)
     local newFrame = Instance.new("Frame",rootFrame)
     newFrame.Name = tostring(currentRow)
-    if currentRow > 1 then
-        newFrame.Position = rootFrame[tostring(currentRow-1)].Position + UDim2.new(0,0,0.15,0)
+    if oldRow == nil then
+        if currentRow > 1 then
+            print(currentRow, "specific row", specificRow)
+            if specificRow == nil then
+                newFrame.Position = rootFrame[tostring(currentRow-1)].Position + UDim2.new(0,0,0.15,0)
+            else
+                newFrame.Position = rootFrame[tostring(specificRow)].Position + UDim2.new(0,0,0.15,0)
+            end
+        else
+            newFrame.Position = UDim2.new(0,0,0,0)
+        end
     else
-        newFrame.Position = UDim2.new(0,0,0.15,0)
+        newFrame.Position = rootFrame[tostring(getLowestElement(rootFrame))].Position + UDim2.new(0,0,-0.15,0)
     end
     newFrame.Size = UDim2.new(1,0,0.3,0)
     newFrame.BackgroundTransparency = 1
@@ -36,13 +74,15 @@ function guiEr.MakeLetter(frame, letter, letterIndex, toNameLetter)
     newLetter.BackgroundTransparency = 1
     newLetter.TextScaled = true
     newLetter.TextColor3 = Color3.fromRGB(128,128,128)
-    newLetter.Size = UDim2.new(0,200,0,50)
-    newLetter.Position = UDim2.new(0.025*letterIndex,0,0,0)
+    -- newLetter.Size = UDim2.new(0,200,0,50)
+    newLetter.Size = UDim2.new(0.2,0,1,0)
+    newLetter.Position = UDim2.new(0.03*letterIndex,0,0,0)
     newLetter.Name = tostring(toNameLetter)
     return newLetter
 end
 
 function guiEr.LoadTyping(rowAmt, totalTime, lettersPerRow)
+    lettersPerRowVar = lettersPerRow
     local lettersList
     local typingScreen = plrGui:WaitForChild("TypingScreen")
     local rootPosition = UDim2.new(0,100,0,200)
@@ -141,34 +181,6 @@ local function checkForOverflow(currentIndex, indexToStop, lettersPerRow)
     return overflowAmt
 end
 
-local function getDictLength(dict)
-    local amt = 0
-    for i,v in pairs(dict) do
-        amt = amt + 1
-    end
-    return amt
-end
-
-local function getLowestElement(frame)
-    local lowestValue = 1000000000
-    for i,v in pairs(frame:GetChildren()) do
-        if tonumber(v.Name) < lowestValue then
-            lowestValue = tonumber(v.Name)
-        end
-    end
-    return lowestValue
-end
-
-local function getHighestElement(frame)
-    local highestValue = 0
-    for i,v in pairs(frame:GetChildren()) do
-        if tonumber(v.Name) > highestValue then
-            highestValue = tonumber(v.Name)
-        end
-    end
-    return highestValue
-end
-
 local function createNewRow(rootFrame, nextRow)
     local rowAmt = 1
     local lettersList,letter, lettersPerRow, rowArray = reqLetterRemoteFunc:InvokeServer(rowAmt, nil, nil, false, true)
@@ -189,6 +201,7 @@ local function createNewRow(rootFrame, nextRow)
 end
 
 local unloadedRowsAbove = {}
+local unloadedRowsBelow = {}
 local red = Color3.fromRGB(255,0,0)
 local white = Color3.fromRGB(255,255,255)
 
@@ -214,7 +227,7 @@ local function unloadRow(rowToUnload, frame, array)
     return array
 end
 
-local function reloadRow(ParentFrame, array)
+local function reloadRow(ParentFrame, array, isOld, specificRow)
     local letterGui = plrGui.TypingScreen.LetterGui
     local row = array[#array]
     local leastFrameNumber = 100000000000
@@ -224,15 +237,15 @@ local function reloadRow(ParentFrame, array)
         end
     end
     print(#array)
-    local frame = guiEr.MakeFrameForLetters(#array, ParentFrame)
+    local frame = guiEr.MakeFrameForLetters(#array, ParentFrame, isOld, specificRow)
     array[#array] = nil
+    --[[ local highestFrame = ParentFrame[tostring(getHighestElement(ParentFrame))]
+    local currentIndex = getHighestElement(highestFrame) ]]--
     for i,v in ipairs(row) do
-        local letter = MakeLetter(frame, v.Letter, v.letterIndex % lettersPerRow, v.letterIndex)
-        PLEASE FIX UP
-        letter.Name = v.letterIndex
-        letter.Position = v.Position
+        -- currentIndex = currentIndex + 1
+        warn("letter index", v.letterIndex)
+        local letter = guiEr.MakeLetter(frame, v.Letter, v.letterIndex % lettersPerRowVar, v.letterIndex)
         letter.TextTransparency = 1
-        letter.Text = v.Letter
         if v.Value then
             letter.TextColor3 = white
         else
@@ -243,6 +256,10 @@ local function reloadRow(ParentFrame, array)
 end
 
 local function moveRowsUp(frame,currentActualRow)
+    --
+    if #unloadedRowsBelow ~= 0 then
+        unloadedRowsBelow = reloadRow(frame, unloadedRowsBelow, nil, getHighestElement(frame))
+    end
     -- for prev prev row
     if getDictLength(frame:GetChildren()) > 5 then
         unloadedRowsAbove = unloadRow(prevRow-1, frame, unloadedRowsAbove)
@@ -265,7 +282,7 @@ end
 local function moveRowsDown(frame,currentActualRow)
     -- for prev prev row
     if #unloadedRowsAbove > 0 then
-        unloadedRowsAbove = reloadRow(frame, unloadedRowsAbove)
+        unloadedRowsAbove = reloadRow(frame, unloadedRowsAbove, true)
     end
     -- for prev row
     guiEr.TweenScreenProperty(frame[tostring(prevRow)],TweenInfo.new(0.5),{TextTransparency = 0})
@@ -279,8 +296,10 @@ local function moveRowsDown(frame,currentActualRow)
     guiEr.TweenRow(frame[tostring(highestFrameNumber-1)],grey,down)
     -- handles middle row
     guiEr.TweenRow(frame[tostring(getHighestElement(frame)-2)],grey,down)
-    if currentActualRow == 1 and getHighestElement(frame) == 5 then
-        frame["5"]:Destroy()
+    -- handles last row
+    if getHighestElement(frame) >= 5 then
+        pls fix
+        unloadedRowsBelow = unloadRow(getHighestElement(frame), frame, unloadedRowsBelow)
     end
 end
 
@@ -300,7 +319,9 @@ function guiEr.CheckRow(currentActualRow)
                 lastRowNumber = tonumber(v.Name)
             end
         end
-        createNewRow(letterGui.Frame, lastRowNumber+1)
+        if #unloadedRowsBelow == 0 then
+            createNewRow(letterGui.Frame, lastRowNumber+1)
+        end
         moveRowsUp(letterGui.Frame,currentActualRow)
         prevRow = prevRow + 1
     elseif prevRow > currentActualRow then
@@ -337,6 +358,7 @@ function guiEr.TweenTextColor(textObjectName,color)
             end
         end
     end
+    print(textObjectName)
     local tween = TS:Create(textObject,TweenInfo.new(0.2),{TextColor3 = color})
     guiEr.CheckRow(currentActualRow)
     tween:Play()
