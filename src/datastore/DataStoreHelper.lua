@@ -1,5 +1,7 @@
 local datastoreMod = {}
 
+local dss = game:GetService("DataStoreService")
+
 function datastoreMod.RequestDatastore(datastoreName, key)
 
 end
