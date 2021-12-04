@@ -12,6 +12,9 @@
     "ServerScriptService": {
       "Server": {
         "$path": "src/server"
+      },
+      "DataStore": {
+        "$path": "src/datastore"
       }
     },
 

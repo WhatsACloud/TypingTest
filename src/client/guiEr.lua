@@ -129,16 +129,19 @@ function guiEr.DisableUI(exceptions)
         if not (v.Name == "BackgroundGui") then
             v.Enabled = true
             for index,gui in pairs(v:GetDescendants()) do
-                pcall(function()
+                success, errData = pcall(function()
                     if gui:IsA("ScrollingFrame") then
                         gui.BackgroundTransparency = 1
                         gui.ScrollBarImageTransparency = 1
                         local tween = TS:Create(gui, TweenInfo.new(0.5), {ScrollBarImageTransparency = transparency})
                         tween:Play()
                     elseif gui:IsA("Frame") then
+                        gui.BackgroundTransparency = 1
                         local tween = TS:Create(gui,TweenInfo.new(0.5),{BackgroundTransparency = transparency})
                         tween:Play()
                     elseif not gui:IsA("ScreenGui") and not gui:IsA("LocalScript") then
+                        gui.BackgroundTransparency = 1
+                        gui.TextTransparency = 1
                         local tween = TS:Create(gui,TweenInfo.new(0.5),{TextTransparency = transparency})
                         tween:Play()
                     end

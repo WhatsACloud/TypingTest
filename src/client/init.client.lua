@@ -63,11 +63,27 @@ local function loadMultiplayerGui()
     guiEr.DisableUI({startScreen.Parent.MultiplayerGui})
 end
 
+local function loadLeaderboardGui()
+    guiEr.DisableUI({startScreen.Parent.LeaderboardGui})
+end
+
+local function loadGlobalLeaderboardGui()
+    guiEr.DisableUI({startScreen.Parent.GlobalGui})
+end
+
 startScreen.StartButton.MouseButton1Click:Connect(function()
     guiEr.DisableUI({startScreen.Parent.SettingGui})
 end)
 
-startScreen.MultiplayerButton.MouseButton1Click:Connect(loadMultiplayerGui)
+-- startScreen.MultiplayerButton.MouseButton1Click:Connect(loadMultiplayerGui)
+startScreen.LeaderboardButton.MouseButton1Click:Connect(loadLeaderboardGui)
+startScreen.Parent.LeaderboardGui.BackButton.MouseButton1Click:Connect(function()
+    guiEr.DisableUI({startScreen})
+end)
+startScreen.Parent.GlobalGui.BackButton.MouseButton1Click:Connect(loadLeaderboardGui)
+startScreen.Parent.LeaderboardGui.GlobalButton.MouseButton1Click:Connect(loadGlobalLeaderboardGui)
+-- startScreen.Parent.LeaderboardGui.FriendsButton.MouseButton1Click:Connect()
+
 local multiplayerGui = startScreen.Parent.MultiplayerGui.Background
 
 local function loadLobbyGui()
