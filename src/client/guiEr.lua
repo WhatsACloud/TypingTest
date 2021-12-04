@@ -47,9 +47,14 @@ end
 
 function guiEr.MakeFrameForLetters(currentRow, rootFrame, oldRow, specificRow)
     local newFrame = Instance.new("Frame",rootFrame)
-    newFrame.Name = tostring(currentRow)
+    if specificRow == nil then
+        newFrame.Name = tostring(currentRow)
+    else
+        newFrame.Name = tostring(specificRow+1)
+    end
+    print(currentRow, oldRow, specificRow)
     if oldRow == nil then
-        if currentRow > 1 then
+    if currentRow > 1 or specificRow ~= nil then
             print(currentRow, "specific row", specificRow)
             if specificRow == nil then
                 newFrame.Position = rootFrame[tostring(currentRow-1)].Position + UDim2.new(0,0,0.15,0)
@@ -64,7 +69,7 @@ function guiEr.MakeFrameForLetters(currentRow, rootFrame, oldRow, specificRow)
     end
     newFrame.Size = UDim2.new(1,0,0.3,0)
     newFrame.BackgroundTransparency = 1
-    newFrame.BackgroundColor3 = Color3.fromRGB(128,128,128)
+    --newFrame.BackgroundColor3 = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
     return newFrame
 end
 
@@ -125,7 +130,12 @@ function guiEr.DisableUI(exceptions)
             v.Enabled = true
             for index,gui in pairs(v:GetDescendants()) do
                 pcall(function()
-                    if gui:IsA("Frame") then
+                    if gui:IsA("ScrollingFrame") then
+                        gui.BackgroundTransparency = 1
+                        gui.ScrollBarImageTransparency = 1
+                        local tween = TS:Create(gui, TweenInfo.new(0.5), {ScrollBarImageTransparency = transparency})
+                        tween:Play()
+                    elseif gui:IsA("Frame") then
                         local tween = TS:Create(gui,TweenInfo.new(0.5),{BackgroundTransparency = transparency})
                         tween:Play()
                     elseif not gui:IsA("ScreenGui") and not gui:IsA("LocalScript") then
@@ -187,13 +197,14 @@ local function createNewRow(rootFrame, nextRow)
     local letterCount = #lettersList
     -- local makeAmt = checkForOverflow(letter, letterCount, lettersPerRow)
     local currentIndex = 0
-    local otherCurrentIndex = letter
+    local highestFrame = rootFrame[tostring(getHighestElement(rootFrame))]
+    local otherCurrentIndex = getHighestElement(highestFrame)
     local rowToReadFrom = nextRow
     guiEr.MakeFrameForLetters(rowToReadFrom, rootFrame)
     for index, val in ipairs(rowArray[rowToReadFrom]) do
         currentIndex = currentIndex + 1
         otherCurrentIndex = otherCurrentIndex + 1
-        local letterObject = guiEr.MakeLetter(rootFrame[tostring(rowToReadFrom)], val, currentIndex, otherCurrentIndex, lettersPerRow)
+        local letterObject = guiEr.MakeLetter(rootFrame[tostring(rowToReadFrom)], val, currentIndex, otherCurrentIndex)
         if getDictLength(rootFrame:GetChildren()) >= 5 then
             letterObject.TextTransparency = 1
         end
@@ -201,7 +212,6 @@ local function createNewRow(rootFrame, nextRow)
 end
 
 local unloadedRowsAbove = {}
-local unloadedRowsBelow = {}
 local red = Color3.fromRGB(255,0,0)
 local white = Color3.fromRGB(255,255,255)
 
@@ -256,10 +266,6 @@ local function reloadRow(ParentFrame, array, isOld, specificRow)
 end
 
 local function moveRowsUp(frame,currentActualRow)
-    --
-    if #unloadedRowsBelow ~= 0 then
-        unloadedRowsBelow = reloadRow(frame, unloadedRowsBelow, nil, getHighestElement(frame))
-    end
     -- for prev prev row
     if getDictLength(frame:GetChildren()) > 5 then
         unloadedRowsAbove = unloadRow(prevRow-1, frame, unloadedRowsAbove)
@@ -298,8 +304,7 @@ local function moveRowsDown(frame,currentActualRow)
     guiEr.TweenRow(frame[tostring(getHighestElement(frame)-2)],grey,down)
     -- handles last row
     if getHighestElement(frame) >= 5 then
-        pls fix
-        unloadedRowsBelow = unloadRow(getHighestElement(frame), frame, unloadedRowsBelow)
+        frame[tostring(getHighestElement(frame))]:Destroy()
     end
 end
 
@@ -319,9 +324,7 @@ function guiEr.CheckRow(currentActualRow)
                 lastRowNumber = tonumber(v.Name)
             end
         end
-        if #unloadedRowsBelow == 0 then
-            createNewRow(letterGui.Frame, lastRowNumber+1)
-        end
+        createNewRow(letterGui.Frame, lastRowNumber+1)
         moveRowsUp(letterGui.Frame,currentActualRow)
         prevRow = prevRow + 1
     elseif prevRow > currentActualRow then

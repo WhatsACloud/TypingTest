@@ -6,29 +6,17 @@ local variables = require(game:GetService("ReplicatedStorage").Common.SharedVari
 local wordsList = require(script.Parent.wordsList).Words
 local keyMap = variables.KeyMap
 
-session.currentLetterIndex = 1
-session.letterIndexArr = {}
-session.lettersArrByRow = {}
-session.Player = nil
-session.Timer = 0
-session.TotalTime = 0
-session.TimerStopped = game:GetService("ReplicatedStorage").RE.EndSession
-session.Data = {
-    WPM = 0
-}
-session.wordsTyped = {}
-session.lettersTyped = {}
-session.PastLettersInWord = {}
-session.LettersPerRow = 0
-session.RowsTyped = {}
-session.Started = false
-session.IsMulti = false
-
 function session:SetAttributes(dict)
     for i,v in dict do
-        if session[i] ~= nil then
-            session[i] = v
+        if self[i] ~= nil then
+            self[i] = v
         end
+    end
+end
+
+function session:PrintAttributesMain()
+    for i,v in pairs(session) do
+        print(i,v)
     end
 end
 
@@ -37,7 +25,20 @@ function session:New(preTable,player, totalTime, lettersPerRow)
     local playerName = preTable.Player.Name
     preTable.TotalTime = totalTime
     preTable.LettersPerRow = lettersPerRow
-    sessionList[playerName] = setmetatable(preTable,{__index = self})
+    preTable.currentLetterIndex = 1
+    preTable.letterIndexArr = {}
+    preTable.lettersArrByRow = {}
+    preTable.Timer = 0
+    preTable.TimerStopped = game:GetService("ReplicatedStorage").RE.EndSession
+    preTable.Data = {
+        WPM = 0
+    }
+    preTable.lettersTyped = {}
+    preTable.RowsTyped = {}
+    preTable.Started = false
+    preTable.IsMulti = false
+    setmetatable(preTable,{__index = session})
+    sessionList[playerName] = preTable
     return sessionList[playerName]
 end
 
@@ -49,10 +50,8 @@ function session:Remove()
 end
 
 function session:LoadTyping(rowAmt, rowRequested)
-    if new then
-        self.letterIndexArr = {}
-    end
     local pastLetterNum = #self.letterIndexArr
+    warn(rowAmt, rowReqested)
     if not rowReqested then
         for i = 1,rowAmt do
             local object = {}
@@ -83,6 +82,7 @@ function session:StoreLetterInRow(rowNumber, letter)
 end
 
 function session:StartTimer(timeLength)
+    timeLength = tonumber(timeLength)
     self.Timer = timeLength
     local timer = coroutine.wrap(function()
         local timerRE = game:GetService("ReplicatedStorage").RE.Timer
@@ -107,20 +107,34 @@ function session:StartTimer(timeLength)
     timer()
 end
 
-local function CalculateAveraged(arr,totalTime)
+local function CalculateAveraged(arr,totalTime, Type)
     local totalNum = 0
+    local increment = 1
     for _,v in ipairs(arr) do
-        if v then
-            totalNum = totalNum + 1
+        if Type == "word" then
+            if v.letter == " " then
+                totalNum = totalNum + increment
+            end
+            if v.value == 0 then 
+                increment = 0
+            end
+        elseif Type == "letter" or Type == "accuracy" then
+            totalNum = totalNum + v.value
         end
+    end
+    if Type == "accuracy" then
+        totalNum = ((totalNum / #arr)*100) / (60/totalTime) -- last part to make value the same
     end
     return totalNum * (60/totalTime)
 end
 
 function session:CalculateWPM()
-    local wordsAv = CalculateAveraged(self.wordsTyped, self.TotalTime)
-    local lettersAv = CalculateAveraged(self.lettersTyped, self.TotalTime)
+    local wordsAv = CalculateAveraged(self.lettersTyped, self.TotalTime, "word")
+    local lettersAv = CalculateAveraged(self.lettersTyped, self.TotalTime, "letter")
+    local accuracy = CalculateAveraged(self.lettersTyped, self.TotalTime, "accuracy")
     self.Data.WPM = wordsAv
+    self.Data.LPM = lettersAv
+    self.Data.Accuracy = accuracy
     return wordsAv
 end
 

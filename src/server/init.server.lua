@@ -15,18 +15,11 @@ local function randLetter()
 end
 
 local function startSession(plr, totalTime, lettersPerRow)
+    --session:PrintAttributesMain()
     local newSession = session:New(nil,plr, totalTime, lettersPerRow)
+    --session:PrintAttributesMain()
     RE.Timer:FireClient(plr,totalTime)
     return newSession
-end
-
-local function isWordCorrect(arr)
-    for _,v in ipairs(arr) do
-        if v == false then
-            return false
-        end
-    end
-    return true
 end
 
 local function typeLetter(player,letter)
@@ -45,20 +38,10 @@ local function typeLetter(player,letter)
     
     -- print(actualLetter,type(actualLetter),textLetter,type(textLetter),playerSession.currentLetterIndex-1)
     if actualLetter == textLetter then
-        table.insert(playerSession.lettersTyped, #playerSession.lettersTyped+1, true)
-        playerSession.PastLettersInWord[#playerSession.PastLettersInWord+1] = true
-        if actualLetter == " " then
-            table.insert(playerSession.wordsTyped, #playerSession.wordsTyped+1, isWordCorrect(playerSession.PastLettersInWord))
-            playerSession.PastLettersInWord = {}
-        end
+        table.insert(playerSession.lettersTyped, #playerSession.lettersTyped+1, {value = 1, letter = actualLetter})
         return true,playerSession.currentLetterIndex-1
     end
-    table.insert(playerSession.lettersTyped, #playerSession.lettersTyped+1, false)
-    playerSession.PastLettersInWord[#playerSession.PastLettersInWord+1] = false
-    if actualLetter == " " then
-        table.insert(playerSession.wordsTyped, #playerSession.wordsTyped+1, isWordCorrect(playerSession.PastLettersInWord))
-        playerSession.PastLettersInWord = {}
-    end
+    table.insert(playerSession.lettersTyped, #playerSession.lettersTyped+1, {value = 0, letter = actualLetter})
     return false,playerSession.currentLetterIndex-1
 end
 
@@ -79,6 +62,10 @@ RE.DeleteLetter.OnServerInvoke = deleteLetter
 RE.RequestLetters.OnServerInvoke = function(plr, rowAmt, totalTime, lettersPerRow, isNew, requestingRow)
     local plrSession
     if isNew then
+        if session:FindSessionByPlayer(plr) then
+            print("a")
+            session:FindSessionByPlayer(plr):Remove()
+        end
         plrSession = startSession(plr, totalTime, lettersPerRow)
     else
         plrSession = session:FindSessionByPlayer(plr)
