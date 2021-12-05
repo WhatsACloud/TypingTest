@@ -2,6 +2,9 @@ local RS = game:GetService("ReplicatedStorage")
 local variables = require(RS.Common.SharedVariables)
 local session = require(script.SessionClass)
 local multiSession = require(script.MultiSessionClass)
+local psh = require(script.PlayerStatsHelper)
+local dsh = require(script.DatastoreHelper)
+local lbh = require(script.LeaderboardHelper)
 local keyMap = variables.KeyMap
 local RE = game:GetService("ReplicatedStorage").RE
 local players = game:GetService("Players")
@@ -63,7 +66,6 @@ RE.RequestLetters.OnServerInvoke = function(plr, rowAmt, totalTime, lettersPerRo
     local plrSession
     if isNew then
         if session:FindSessionByPlayer(plr) then
-            print("a")
             session:FindSessionByPlayer(plr):Remove()
         end
         plrSession = startSession(plr, totalTime, lettersPerRow)
@@ -88,9 +90,61 @@ RE.StopTimer.OnServerInvoke = function(plr)
     return
 end
 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- DATASTORES
+
+local reqLeaderboardRF = RE.RequestLeaderboard
+local reqFriendsLeaderboardRF = RE.RequestFriendsLeaderboard
+local STATS = "Statistics"
+
+local function returnLeaderboard(player)
+    return lbh.GetLeaderboard()
+end
+
+local function returnFriendsLeaderboard(player)
+    return lbh.GetFriends(player)
+end
+
+reqLeaderboardRF.OnServerInvoke = returnLeaderboard
+reqFriendsLeaderboardRF.OnServerInvoke = returnFriendsLeaderboard
+
 players.PlayerAdded:Connect(function(player)
     repeat wait() until player.Character ~= nil
     local char = player.Character
     char.Humanoid.WalkSpeed = 0
     char.Humanoid.JumpHeight = 0
+    local playerData = dsh.RequestDatastore(STATS, player.UserId)
+    if playerData then
+        psh:Set(player, playerData)
+        -- insert triggering some remote event or smth
+    else
+        dsh.CreateDatastoreEntry(STATS, player.UserId, dsh.DefaultValues[STATS])
+        psh:Set(player, dsh.DefaultValues[STATS])
+    end
+    lbh.CacheAndUpdateFriends(player)
 end)
+
+players.PlayerRemoving:Connect(function(player)
+    local playerData = psh:Get(player)
+    dsh.CreateDatastoreEntry(STATS, player.UserId, playerData)
+    psh:Remove(player)
+    lbh.RemoveFriends(player)
+end)
+
+local function compareAndUpdateLeaderboards()
+    for _,player in pairs(game.Players:GetPlayers()) do
+        lbh.AttemptAdd(player)
+    end
+    lbh.updateLeaderboardFromCache()
+    lbh.CacheAndUpdateFriends()
+end
+
+lbh.CacheLeaderboard()
+
+coroutine.wrap(function()
+    while true do
+        compareAndUpdateLeaderboards()
+        wait(180) -- waits 3 minutes before updating
+    end
+end)
+

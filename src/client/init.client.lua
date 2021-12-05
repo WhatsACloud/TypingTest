@@ -67,8 +67,25 @@ local function loadLeaderboardGui()
     guiEr.DisableUI({startScreen.Parent.LeaderboardGui})
 end
 
+local baseFrame = RS.GuiObjs.Leaderboard.PlayerFrame
 local function loadGlobalLeaderboardGui()
     guiEr.DisableUI({startScreen.Parent.GlobalGui})
+    local globalLeaderboard = RE.RequestLeaderboard:InvokeServer()
+    for i,v ipairs(globalLeaderboard) do
+        local newFrame = baseFrame:Clone()
+        newFrame.Parent = startScreen.Parent.GlobalGui.ScrollingFrame
+        newFrame.LayoutOrder = i
+    end
+end
+
+local function loadFriendsLeaderboardGui()
+    guiEr.DisableUI({startScreen.Parent.FriendsGui})
+    local friendsLeaderboard = RE.RequestFriendsLeaderboard:InvokeServer()
+    for i,v ipairs(friendsLeaderboard) do
+        local newFrame = baseFrame:Clone()
+        newFrame.Parent = startScreen.Parent.FriendsGui.ScrollingFrame
+        newFrame.LayoutOrder = i
+    end
 end
 
 startScreen.StartButton.MouseButton1Click:Connect(function()
@@ -82,6 +99,7 @@ startScreen.Parent.LeaderboardGui.BackButton.MouseButton1Click:Connect(function(
 end)
 startScreen.Parent.GlobalGui.BackButton.MouseButton1Click:Connect(loadLeaderboardGui)
 startScreen.Parent.LeaderboardGui.GlobalButton.MouseButton1Click:Connect(loadGlobalLeaderboardGui)
+startScreen.Parent.LeaderboardGui.FriendsButton.MouseButton1Click:Connect(loadFriendsLeaderboardGui)
 -- startScreen.Parent.LeaderboardGui.FriendsButton.MouseButton1Click:Connect()
 
 local multiplayerGui = startScreen.Parent.MultiplayerGui.Background

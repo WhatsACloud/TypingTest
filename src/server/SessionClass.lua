@@ -4,6 +4,7 @@ local sessionList = {}
 
 local variables = require(game:GetService("ReplicatedStorage").Common.SharedVariables)
 local wordsList = require(script.Parent.wordsList).Words
+local psh = require(script.Parent.playerStatsMod)
 local keyMap = variables.KeyMap
 
 function session:SetAttributes(dict)
@@ -102,6 +103,7 @@ function session:StartTimer(timeLength)
             timerRE:FireClient(self.Player,self.Timer)
         end
         self:CalculateWPM()
+        psh:Update(self.Player, {WPM = self.Data.WPM, LPM = self.Data.LPM})
         self.TimerStopped:FireClient(self.Player,self.Data)
     end)
     timer()
