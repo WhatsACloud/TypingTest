@@ -1,6 +1,6 @@
 local leaderboardMod = {}
 
-local dsh = require(script.DatastoreHelper)
+local dsh = require(script.Parent.DatastoreHelper)
 local maxAmt = 15
 
 local validationTable = {
@@ -22,13 +22,13 @@ player leaves -> remove friends leaderboard from list, save data, remove their s
 
 local leaderboard = {}
 function leaderboardMod.CacheLeaderboard()
-    if #data ~= maxAmt then warn("pls provide valid data"); return end
     for i = 1,maxAmt do
         leaderboard[i] = dsh.RequestDatastore("Leaderboard", i)
     end
 end
 
 function leaderboardMod.GetLeaderboard()
+    print(leaderboard)
     return leaderboard
 end
 
@@ -37,20 +37,16 @@ function leaderboardMod.UpdateCache(index, data)
 end
 
 function leaderboardMod.IsFirstBigger(leaderboard, cache)
-    local leaderboardAmt = {}
-    local cacheAmt = {}
+    local leaderboardAmt = 0
+    local cacheAmt = 0
     for i,v in pairs(leaderboard) do
-        if leaderboardAmt[i] ~= nil then
-            leaderboardAmt[i] = leaderboardAmt[i] + v
-        else
-            leaderboardAmt[i] = v
+        if i ~= "PlayerId" then
+            leaderboardAmt = leaderboardAmt + v
         end
     end
     for i,v in pairs(cache) do
-        if cacheAmt[i] ~= nil then
-            cacheAmt[i] = cacheAmt[i] + v
-        else
-            cacheAmt[i] = v
+        if i ~= "PlayerId" then
+            cacheAmt = cacheAmt + v
         end
     end
     if leaderboardAmt >= cacheAmt then
@@ -60,14 +56,18 @@ function leaderboardMod.IsFirstBigger(leaderboard, cache)
 end
 
 function leaderboardMod.updateLeaderboardFromCache()
+    print("attempting to update leaderboard")
     for i = 1, maxAmt do
         local leaderboardStat = dsh.SafeDatastoreRequest("Leaderboard", i)
-        local cacheStat = Leaderboard[i]
+        local cacheStat = leaderboard[i]
         if leaderboardStat == nil then
+            print(i, leaderboardStat, cacheStat)
+            dsh.UpdateDatastoreEntry("Leaderboard", i, cacheStat)
             break
         end
         if leaderboardMod.IsFirstBigger(cacheStat, leaderboardStat) then
-            dsh.UpdateDatastoreEntry("Leaderboard", i, leaderboardStat)
+            dsh.UpdateDatastoreEntry("Leaderboard", i, cacheStat)
+            break
         end
     end
 end
@@ -100,27 +100,62 @@ function leaderboardMod.MoveLeaderboardDown(index)
     end
 end
 
+function leaderboardMod.SquashLeaderboardUp()
+    for i = 1, maxAmt do
+        local leaderboardStat = leaderboard[i]
+        if leaderboardStat == nil then
+            for a = i+1, maxAmt do
+                if leaderboard[a] ~= nil then
+                    leaderboardMod.UpdateCache(i, leaderboard[a])
+                    break
+                end
+            end
+        end
+    end
+end
+
+function leaderboardMod.PlayerIdExistsInLeaderboard(playerId)
+    for i,v in pairs(leaderboard) do
+        if v.PlayerId == playerId then
+            return true
+        end
+    end
+    return false
+end
+
 function leaderboardMod.AttemptAdd(player, vals)
-    if not leaderboardMod.Validate(vals) then return nil end
+    print(vals)
+    if not leaderboardMod.Validate(vals) then warn("UH OH ERROR OCCURED LOL"); return nil end
     local wpm = vals.WPM
     local lpm = vals.LPM
+    local playerId = vals.PlayerId
     local success = false
     for i = 1, maxAmt do
         local leaderboardStat = leaderboard[i]
-        local willUpdate = false
-        if wpm > leaderboardStat.WPM then
-            leaderboardStat.WPM = wpm
-            willUpdate = true
-        end
-        if lpm > leaderboardStat.LPM then
-            leaderboardStat.LPM = lpm
-            willUpdate = true
-        end
-        if willUpdate then
-            leaderboardStat.PlayerId = player
-            leaderboardMod.MoveLeaderboardDown(i) -- make room for new entry
-            leaderboardMod.UpdateCache(i, leaderboardStat)
-            success = true
+        if leaderboardStat ~= nil then
+            local willUpdate = false
+            if wpm > leaderboardStat.WPM then
+                leaderboardStat.WPM = wpm
+                willUpdate = true
+            end
+            if lpm > leaderboardStat.LPM then
+                leaderboardStat.LPM = lpm
+                willUpdate = true
+            end
+            if willUpdate and not PlayerIdExistsInLeaderboard(playerId) then
+                leaderboardStat.PlayerId = player
+                leaderboardMod.MoveLeaderboardDown(i) -- make room for new entry
+                leaderboardMod.UpdateCache(i, leaderboardStat)
+                success = true
+                break
+            else
+                leaderboardMod.UpdateCache(i, nil)
+                leaderboardMod.SquashLeaderboardUp()
+                leaderboardMod.AttemptAdd(player, vals)
+                break
+            end
+        else
+            leaderboard[i] = vals
             break
         end
     end
@@ -145,19 +180,23 @@ local function iterPageItems(pages) -- DeFiNiTeLy not copied from roblox docs :)
 	end)
 end
 
-function leaderboardMod.CacheAndUpdateFriends(player)
+function leaderboardMod.CacheAndUpdateFriends(player, playerData)
+    friendsLeaderboardList[player.UserId] = true
     local friendsPages = game.Players:GetFriendsAsync(player.UserId)
     local friendList = {}
     for item, pageNo in iterPageItems(friendsPages) do
         local friendUserId = item.Id
         local friendName = item.Username
         local friendData = dsh.RequestDatastore("Statistics", friendUserId)
-        friendData.Name = friendName
         if friendData then
-            friendList[friendUserId] = friendData
+            friendData.Name = friendName
+            friendList[#friendList+1] = friendData
         end
     end
     local newList = {}
+    if playerData then
+        friendList[#friendList+1] = playerData
+    end
     for i,v in ipairs(friendList) do
         if #newList ~= 0 then
             for a = 1, #newList do -- compares values
@@ -195,6 +234,9 @@ function leaderboardMod.RemoveFriends(player)
 end
 
 function leaderboardMod.GetFriends(player)
+    if friendsLeaderboardList[player.UserId] == true then
+        repeat print("waiting for friends leaderboard to load..."); wait(1) until type(friendsLeaderboardList[player.UserId]) == "table"
+    end
     return friendsLeaderboardList[player.UserId]
 end
 

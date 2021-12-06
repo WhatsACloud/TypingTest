@@ -4,7 +4,7 @@ local sessionList = {}
 
 local variables = require(game:GetService("ReplicatedStorage").Common.SharedVariables)
 local wordsList = require(script.Parent.wordsList).Words
-local psh = require(script.Parent.playerStatsMod)
+local psh = require(script.Parent.PlayerStatsHelper)
 local keyMap = variables.KeyMap
 
 function session:SetAttributes(dict)
@@ -52,7 +52,6 @@ end
 
 function session:LoadTyping(rowAmt, rowRequested)
     local pastLetterNum = #self.letterIndexArr
-    warn(rowAmt, rowReqested)
     if not rowReqested then
         for i = 1,rowAmt do
             local object = {}
@@ -103,13 +102,20 @@ function session:StartTimer(timeLength)
             timerRE:FireClient(self.Player,self.Timer)
         end
         self:CalculateWPM()
-        psh:Update(self.Player, {WPM = self.Data.WPM, LPM = self.Data.LPM})
+        local storedData = psh:Get(self.Player)
+        print(self)
+        for i,v in pairs(storedData) do
+            if self[i] > v then
+                psh:Update(self.Player, {WPM = self.Data.WPM, LPM = self.Data.LPM})
+                break
+            end
+        end 
         self.TimerStopped:FireClient(self.Player,self.Data)
     end)
     timer()
 end
 
-local function CalculateAveraged(arr,totalTime, Type)
+local function CalculateAveraged(arr,totalTime, Type, extra)
     local totalNum = 0
     local increment = 1
     for _,v in ipairs(arr) do
@@ -117,23 +123,22 @@ local function CalculateAveraged(arr,totalTime, Type)
             if v.letter == " " then
                 totalNum = totalNum + increment
             end
-            if v.value == 0 then 
-                increment = 0
-            end
         elseif Type == "letter" or Type == "accuracy" then
             totalNum = totalNum + v.value
         end
     end
     if Type == "accuracy" then
         totalNum = ((totalNum / #arr)*100) / (60/totalTime) -- last part to make value the same
+    elseif Type == "word" then
+        totalNum = totalNum * extra
     end
     return totalNum * (60/totalTime)
 end
 
 function session:CalculateWPM()
-    local wordsAv = CalculateAveraged(self.lettersTyped, self.TotalTime, "word")
     local lettersAv = CalculateAveraged(self.lettersTyped, self.TotalTime, "letter")
     local accuracy = CalculateAveraged(self.lettersTyped, self.TotalTime, "accuracy")
+    local wordsAv = CalculateAveraged(self.lettersTyped, self.TotalTime, "word", accuracy/100)
     self.Data.WPM = wordsAv
     self.Data.LPM = lettersAv
     self.Data.Accuracy = accuracy

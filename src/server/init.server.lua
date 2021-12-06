@@ -121,7 +121,11 @@ players.PlayerAdded:Connect(function(player)
         dsh.CreateDatastoreEntry(STATS, player.UserId, dsh.DefaultValues[STATS])
         psh:Set(player, dsh.DefaultValues[STATS])
     end
-    lbh.CacheAndUpdateFriends(player)
+    if playerData then
+        lbh.CacheAndUpdateFriends(player, playerData)
+    else
+        lbh.CacheAndUpdateFriends(player, dsh.DefaultValues[STATS])
+    end
 end)
 
 players.PlayerRemoving:Connect(function(player)
@@ -133,10 +137,16 @@ end)
 
 local function compareAndUpdateLeaderboards()
     for _,player in pairs(game.Players:GetPlayers()) do
-        lbh.AttemptAdd(player)
+        print(player)
+        local tab = psh:Get(player)
+        tab.PlayerId = player.UserId
+        lbh.AttemptAdd(player, tab)
     end
+    print("asfhefifhfdisf")
     lbh.updateLeaderboardFromCache()
-    lbh.CacheAndUpdateFriends()
+    for _,player in pairs(game.Players:GetPlayers()) do
+        lbh.CacheAndUpdateFriends(player, psh:Get(player))
+    end
 end
 
 lbh.CacheLeaderboard()
@@ -146,5 +156,5 @@ coroutine.wrap(function()
         compareAndUpdateLeaderboards()
         wait(180) -- waits 3 minutes before updating
     end
-end)
+end)()
 

@@ -52,7 +52,6 @@ function guiEr.MakeFrameForLetters(currentRow, rootFrame, oldRow, specificRow)
     else
         newFrame.Name = tostring(specificRow+1)
     end
-    print(currentRow, oldRow, specificRow)
     if oldRow == nil then
     if currentRow > 1 or specificRow ~= nil then
             print(currentRow, "specific row", specificRow)
@@ -130,20 +129,32 @@ function guiEr.DisableUI(exceptions)
             v.Enabled = true
             for index,gui in pairs(v:GetDescendants()) do
                 success, errData = pcall(function()
+                    local plsIgnore = false
+                    if gui:FindFirstChild("ignore") then
+                        if gui:FindFirstChild("ignore"):IsA("StringValue") then
+                            plsIgnore = true
+                        end
+                    end
                     if gui:IsA("ScrollingFrame") then
                         gui.BackgroundTransparency = 1
                         gui.ScrollBarImageTransparency = 1
-                        local tween = TS:Create(gui, TweenInfo.new(0.5), {ScrollBarImageTransparency = transparency})
-                        tween:Play()
+                        if not plsIgnore then
+                            local tween = TS:Create(gui, TweenInfo.new(0.5), {ScrollBarImageTransparency = transparency})
+                            tween:Play()
+                        end
                     elseif gui:IsA("Frame") then
                         gui.BackgroundTransparency = 1
-                        local tween = TS:Create(gui,TweenInfo.new(0.5),{BackgroundTransparency = transparency})
-                        tween:Play()
+                        if not plsIgnore then
+                            local tween = TS:Create(gui,TweenInfo.new(0.5),{BackgroundTransparency = transparency})
+                            tween:Play()
+                        end
                     elseif not gui:IsA("ScreenGui") and not gui:IsA("LocalScript") then
                         gui.BackgroundTransparency = 1
                         gui.TextTransparency = 1
-                        local tween = TS:Create(gui,TweenInfo.new(0.5),{TextTransparency = transparency})
-                        tween:Play()
+                        if not plsIgnore then
+                            local tween = TS:Create(gui,TweenInfo.new(0.5),{TextTransparency = transparency})
+                            tween:Play()
+                        end
                     end
                 end)
             end
@@ -364,7 +375,6 @@ function guiEr.TweenTextColor(textObjectName,color)
             end
         end
     end
-    print(textObjectName)
     local tween = TS:Create(textObject,TweenInfo.new(0.2),{TextColor3 = color})
     guiEr.CheckRow(currentActualRow)
     tween:Play()

@@ -1,6 +1,6 @@
 local playerStatsMod = {}
 
-local dsh = require(script.DatastoreHelper)
+local dsh = require(script.Parent.DatastoreHelper)
 
 local playerStatsList = {}
 
@@ -9,6 +9,7 @@ function playerStatsMod:Set(player, values)
     local lpm = values.LPM
     if wpm == nil or lpm == nil then warn("Please provide valid values!"); return end
     playerStatsList[player.UserId] = {WPM = wpm, LPM = lpm}
+    print("set", playerStatsList[player.UserId])
 end
 
 function playerStatsMod:Update(player, values)
@@ -17,13 +18,16 @@ function playerStatsMod:Update(player, values)
     local lpm = values.LPM
     if wpm == nil or lpm == nil then warn("Please provide valid values!"); return end
     playerStatsList[player.UserId] = {WPM = wpm, LPM = lpm}
+    print("update", playerStatsList[player.UserId])
 end
 
 function playerStatsMod:Remove(player)
     playerStatsList[player.UserId] = nil
+    print("remove", playerStatsList[player.UserId])
 end
 
 function playerStatsMod:Get(player)
+    print("get", playerStatsList[player.UserId])
     return playerStatsList[player.UserId]
 end
 

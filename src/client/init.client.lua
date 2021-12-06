@@ -67,26 +67,114 @@ local function loadLeaderboardGui()
     guiEr.DisableUI({startScreen.Parent.LeaderboardGui})
 end
 
+local cache = {}
+function getUsernameFromUserId(userId) -- copied from roblox docs lol
+	-- First, check if the cache contains the name
+	if cache[userId] then return cache[userId] end
+	-- Second, check if the user is already connected to the server
+    local Players = game:GetService("Players")
+	local player = Players:GetPlayerByUserId(userId)
+	if player then
+		cache[userId] = player.Name
+		return player.Name
+	end 
+	-- If all else fails, send a request
+	local name
+	pcall(function()
+		name = Players:GetNameFromUserIdAsync(userId)
+	end)
+	cache[userId] = name
+	return name
+end
+
 local baseFrame = RS.GuiObjs.Leaderboard.PlayerFrame
 local function loadGlobalLeaderboardGui()
+    for i,v in pairs(startScreen.Parent.GlobalGui.ScrollingFrame:GetChildren()) do
+        if not v:IsA("UIListLayout") then
+            v:Destroy()
+        end
+    end
+    local plsClear = RS.GuiObjs.Leaderboard.PlsClear:Clone()
+    plsClear.Parent = startScreen.Parent.GlobalGui.ScrollingFrame
     guiEr.DisableUI({startScreen.Parent.GlobalGui})
     local globalLeaderboard = RE.RequestLeaderboard:InvokeServer()
-    for i,v ipairs(globalLeaderboard) do
+    plsClear:Destroy()
+    for i,v in ipairs(globalLeaderboard) do
         local newFrame = baseFrame:Clone()
+        newFrame.Name = tostring(i)
+        newFrame.WPM.Text = v.WPM
+        newFrame.LPM.Text = v.LPM
+        newFrame.Pos.Text = newFrame.Name
+        newFrame.PlayerName.Text = getUsernameFromUserId(v.PlayerId)
+        if newFrame.PlayerName.Text == game.Players.LocalPlayer.Name then
+            newFrame.PlayerName.Text = "you"
+            newFrame.BackgroundColor3 = Color3.fromRGB(134,134,134)
+        end
         newFrame.Parent = startScreen.Parent.GlobalGui.ScrollingFrame
         newFrame.LayoutOrder = i
     end
 end
 
 local function loadFriendsLeaderboardGui()
+    for i,v in pairs(startScreen.Parent.FriendsGui.ScrollingFrame:GetChildren()) do
+        print(i,v)
+        if not (v:IsA("UIListLayout")) then
+            if not (v.Name == "FriendsInvite") then
+                print(v)
+                v:Destroy()
+            else
+                print(v.Name, v.Name == "FriendsInvite")
+            end
+        end
+    end
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.LayoutOrder = 2
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.BackgroundTransparency = 1
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.BackgroundTransparency = 1
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.TextTransparency = 1
+    local plsClear = RS.GuiObjs.Leaderboard.PlsClear:Clone()
+    plsClear.Parent = startScreen.Parent.FriendsGui.ScrollingFrame
     guiEr.DisableUI({startScreen.Parent.FriendsGui})
     local friendsLeaderboard = RE.RequestFriendsLeaderboard:InvokeServer()
-    for i,v ipairs(friendsLeaderboard) do
+    plsClear:Destroy()
+    print("friends", friendsLeaderboard)
+    for i,v in ipairs(friendsLeaderboard) do
         local newFrame = baseFrame:Clone()
+        newFrame.Name = tostring(i)
+        newFrame.WPM.Text = v.WPM
+        newFrame.LPM.Text = v.LPM
+        newFrame.Pos.Text = newFrame.Name
+        newFrame.PlayerName.Text = getUsernameFromUserId(v.PlayerId)
+        if newFrame.PlayerName.Text == game.Players.LocalPlayer.Name then
+            newFrame.PlayerName.Text = "you"
+            newFrame.BackgroundColor3 = Color3.fromRGB(134,134,134)
+        end
         newFrame.Parent = startScreen.Parent.FriendsGui.ScrollingFrame
         newFrame.LayoutOrder = i
     end
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.LayoutOrder = #friendsLeaderboard+1
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.BackgroundTransparency = 0
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.BackgroundTransparency = 0
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.TextTransparency = 0
 end
+
+local function invokeInviteFriends()
+    print('invoked invite friends')
+    local targetPlayer = game.Players.LocalPlayer
+    local SS = game:GetService("SocialService")
+    local res, canSend = pcall(function()
+        return SS:CanSendGameInviteAsync(targetPlayer)
+    end)
+    print(res, canSend)
+    if canSend then
+        local res, canInvite = pcall(function()
+            SS:PromptGameInvite(targetPlayer)
+        end)
+        print(res, canInvite)
+    else
+        warn("cannot prompt player to send invite!")
+    end
+end
+startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.MouseButton1Click:Connect(invokeInviteFriends)
 
 startScreen.StartButton.MouseButton1Click:Connect(function()
     guiEr.DisableUI({startScreen.Parent.SettingGui})
@@ -97,6 +185,7 @@ startScreen.LeaderboardButton.MouseButton1Click:Connect(loadLeaderboardGui)
 startScreen.Parent.LeaderboardGui.BackButton.MouseButton1Click:Connect(function()
     guiEr.DisableUI({startScreen})
 end)
+startScreen.Parent.FriendsGui.BackButton.MouseButton1Click:Connect(loadLeaderboardGui)
 startScreen.Parent.GlobalGui.BackButton.MouseButton1Click:Connect(loadLeaderboardGui)
 startScreen.Parent.LeaderboardGui.GlobalButton.MouseButton1Click:Connect(loadGlobalLeaderboardGui)
 startScreen.Parent.LeaderboardGui.FriendsButton.MouseButton1Click:Connect(loadFriendsLeaderboardGui)
