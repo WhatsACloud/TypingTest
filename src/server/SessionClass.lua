@@ -105,9 +105,11 @@ function session:StartTimer(timeLength)
         local storedData = psh:Get(self.Player)
         print(self)
         for i,v in pairs(storedData) do
-            if self[i] > v then
-                psh:Update(self.Player, {WPM = self.Data.WPM, LPM = self.Data.LPM})
-                break
+            if i ~= "PlayerId" then
+                if self.Data[i] > v then
+                    psh:Update(self.Player, {WPM = self.Data.WPM, LPM = self.Data.LPM})
+                    break
+                end
             end
         end 
         self.TimerStopped:FireClient(self.Player,self.Data)

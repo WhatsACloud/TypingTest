@@ -16,6 +16,11 @@ local function getDictLength(dict)
     return amt
 end
 
+local soundS = require(script.Parent.SoundS)
+function guiEr.PlayHoverSound()
+    soundS.playSound(3314301151, {Name = "Hover"})
+end
+
 local function getHighestElement(frame)
     local highestValue = 0
     for i,v in pairs(frame:GetChildren()) do
@@ -80,8 +85,9 @@ function guiEr.MakeLetter(frame, letter, letterIndex, toNameLetter)
     newLetter.TextColor3 = Color3.fromRGB(128,128,128)
     -- newLetter.Size = UDim2.new(0,200,0,50)
     newLetter.Size = UDim2.new(0.2,0,1,0)
-    newLetter.Position = UDim2.new(0.03*letterIndex,0,0,0)
+    newLetter.Position = UDim2.new(0.045*letterIndex,0,0,0)
     newLetter.Name = tostring(toNameLetter)
+    newLetter.Font = Enum.Font.Code
     return newLetter
 end
 
@@ -89,7 +95,7 @@ function guiEr.LoadTyping(rowAmt, totalTime, lettersPerRow)
     lettersPerRowVar = lettersPerRow
     local lettersList
     local typingScreen = plrGui:WaitForChild("TypingScreen")
-    local rootPosition = UDim2.new(0,100,0,200)
+    local rootPosition = UDim2.new(0.1,0,0.2,0)
     local placeHolder
     lettersList,placeHolder, lettersPerRow, rowArray = reqLetterRemoteFunc:InvokeServer(rowAmt, totalTime, lettersPerRow, true)
     local rootFrame
@@ -151,10 +157,14 @@ function guiEr.DisableUI(exceptions)
                     elseif not gui:IsA("ScreenGui") and not gui:IsA("LocalScript") then
                         gui.BackgroundTransparency = 1
                         gui.TextTransparency = 1
-                        if not plsIgnore then
-                            local tween = TS:Create(gui,TweenInfo.new(0.5),{TextTransparency = transparency})
-                            tween:Play()
-                        end
+                        local tween = TS:Create(gui,TweenInfo.new(0.5),{TextTransparency = transparency})
+                        tween:Play()
+                        pcall(function()
+                            if gui:IsA("TextButton") and (not plsIgnore) then
+                                local tween2 = TS:Create(gui,TweenInfo.new(0.5),{BackgroundTransparency = transparency})
+                                tween2:Play()
+                            end
+                        end)
                     end
                 end)
             end
@@ -267,7 +277,7 @@ local function reloadRow(ParentFrame, array, isOld, specificRow)
     local currentIndex = getHighestElement(highestFrame) ]]--
     for i,v in ipairs(row) do
         -- currentIndex = currentIndex + 1
-        warn("letter index", v.letterIndex)
+        -- warn("letter index", v.letterIndex)
         local letter = guiEr.MakeLetter(frame, v.Letter, v.letterIndex % lettersPerRowVar, v.letterIndex)
         letter.TextTransparency = 1
         if v.Value then
@@ -280,13 +290,15 @@ local function reloadRow(ParentFrame, array, isOld, specificRow)
 end
 
 local function moveRowsUp(frame,currentActualRow)
+    local row = prevRow - 1
+    warn(row, "ffeieifeifdfdskfsdkfkf")
     -- for prev prev row
     if getDictLength(frame:GetChildren()) > 5 then
-        unloadedRowsAbove = unloadRow(prevRow-1, frame, unloadedRowsAbove)
+        unloadedRowsAbove = unloadRow(row-1, frame, unloadedRowsAbove)
     end
     -- for prev row
-    guiEr.TweenScreenProperty(frame[tostring(prevRow)],TweenInfo.new(0.5),{TextTransparency = 1})
-    guiEr.TweenRow(frame[tostring(prevRow)],nil,up)
+    guiEr.TweenScreenProperty(frame[tostring(row)],TweenInfo.new(0.5),{TextTransparency = 1})
+    guiEr.TweenRow(frame[tostring(row)],nil,up)
     -- for current row
     guiEr.TweenRow(frame[tostring(currentActualRow)],grey,up)
     -- second newest row to become visible
@@ -300,13 +312,15 @@ local function moveRowsUp(frame,currentActualRow)
 end
 
 local function moveRowsDown(frame,currentActualRow)
+    local row = prevRow - 1
+    warn(row, "ffeieifeifdfdskfsdkfkf")
     -- for prev prev row
     if #unloadedRowsAbove > 0 then
         unloadedRowsAbove = reloadRow(frame, unloadedRowsAbove, true)
     end
     -- for prev row
-    guiEr.TweenScreenProperty(frame[tostring(prevRow)],TweenInfo.new(0.5),{TextTransparency = 0})
-    guiEr.TweenRow(frame[tostring(prevRow)],nil,down)
+    guiEr.TweenScreenProperty(frame[tostring(row)],TweenInfo.new(0.5),{TextTransparency = 0})
+    guiEr.TweenRow(frame[tostring(row)],nil,down)
     -- for current row
     guiEr.TweenScreenProperty(frame[tostring(currentActualRow)],TweenInfo.new(0.5),{TextTransparency = 0})
     guiEr.TweenRow(frame[tostring(currentActualRow)],nil,down)
@@ -322,6 +336,7 @@ local function moveRowsDown(frame,currentActualRow)
     end
 end
 
+local checkRowDeb = false
 function guiEr.CheckRow(currentActualRow)
     local lettersPerRow = plrGui.TypingScreen.LetterGui.Frame:FindFirstChildOfClass("Frame"):GetChildren()
     local per = 0
@@ -330,21 +345,27 @@ function guiEr.CheckRow(currentActualRow)
     end
     lettersPerRow = per+1
     local letterGui = plrGui.TypingScreen.LetterGui
+    if checkRowDeb then return end
+    checkRowDeb = true
+    coroutine.wrap(function()
+        wait(0.5)
+        checkRowDeb = false
+    end)()
     if prevRow < currentActualRow then
-        print("prevRow is less than currentActualRow")
+        warn("prevRow is less than currentActualRow", prevRow, currentActualRow)
         local lastRowNumber = 0
         for _,v in pairs(letterGui.Frame:GetChildren()) do
             if tonumber(v.Name) > lastRowNumber then
                 lastRowNumber = tonumber(v.Name)
             end
         end
+        prevRow = prevRow + 1
         createNewRow(letterGui.Frame, lastRowNumber+1)
         moveRowsUp(letterGui.Frame,currentActualRow)
-        prevRow = prevRow + 1
     elseif prevRow > currentActualRow then
-        print("prevRow is more than currentActualRow")
-        moveRowsDown(letterGui.Frame,currentActualRow)
+        warn("prevRow is more than currentActualRow", prevRow, currentActualRow)
         prevRow = prevRow - 1
+        moveRowsDown(letterGui.Frame,currentActualRow)
     end
 end
 
@@ -375,7 +396,7 @@ function guiEr.TweenTextColor(textObjectName,color)
             end
         end
     end
-    local tween = TS:Create(textObject,TweenInfo.new(0.2),{TextColor3 = color})
+    local tween = TS:Create(textObject,TweenInfo.new(0.01),{TextColor3 = color})
     guiEr.CheckRow(currentActualRow)
     tween:Play()
 end

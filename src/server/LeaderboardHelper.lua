@@ -20,6 +20,8 @@ player accesses friends leaderboard -> get cached friends leaderboard ✔️
 player leaves -> remove friends leaderboard from list, save data, remove their stats in game ✔️
 ]]--
 
+--please make it so that player data is only removed after comparing leaderboards
+
 local leaderboard = {}
 function leaderboardMod.CacheLeaderboard()
     for i = 1,maxAmt do
@@ -142,7 +144,7 @@ function leaderboardMod.AttemptAdd(player, vals)
                 leaderboardStat.LPM = lpm
                 willUpdate = true
             end
-            if willUpdate and not PlayerIdExistsInLeaderboard(playerId) then
+            if willUpdate and (not leaderboardMod.PlayerIdExistsInLeaderboard(playerId)) then
                 leaderboardStat.PlayerId = player
                 leaderboardMod.MoveLeaderboardDown(i) -- make room for new entry
                 leaderboardMod.UpdateCache(i, leaderboardStat)

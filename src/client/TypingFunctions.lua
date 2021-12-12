@@ -1,16 +1,24 @@
 local typingFuncs = {}
 local guiEr = require(script.Parent.guiEr)
 local player = game.Players.LocalPlayer
+local soundS = require(script.Parent.SoundS)
+local typingSound = soundS.loadSound(4724428597)
+
+local function playTypingSound()
+    typingSound:Play()
+end
 
 function typingFuncs.DeleteLetter()
     local index = game:GetService("ReplicatedStorage").RE.DeleteLetter:InvokeServer()
     if index then
+        playTypingSound()
         guiEr.TweenTextColor(index,Color3.fromRGB(128,128,128))
     end
 end
 
 function typingFuncs.changeColor(result,letterName)
     if result == nil then return end
+    playTypingSound()
     if result then
         guiEr.TweenTextColor(letterName,Color3.fromRGB(255,255,255))
         return
@@ -30,7 +38,9 @@ function typingFuncs.detectedKeyInput(input,gameProcessed)
             customKeybinds[input.KeyCode]()
             return
         end
+        print("a")
         local result,letterIndex = inputRF:InvokeServer(input.KeyCode)
+        print("b")
         if result ~= nil then
             typingFuncs.changeColor(result,letterIndex)
         end

@@ -303,7 +303,6 @@ security
 both
 g
 county
-american
 photo
 game
 members
@@ -571,7 +570,6 @@ create
 key
 body
 young
-america
 important
 field
 few
@@ -628,7 +626,6 @@ release
 analysis
 request
 fax
-china
 making
 picture
 needs
@@ -775,7 +772,6 @@ average
 done
 technical
 window
-france
 pro
 region
 island

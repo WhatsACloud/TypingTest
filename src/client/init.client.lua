@@ -1,6 +1,7 @@
 local player = game.Players.LocalPlayer
 local guiEr = require(script.guiEr)
 local typingFunc = require(script.TypingFunctions)
+local hbs = require(script.HoverButtonS)
 
 require(script.DisableResetScript).DisableReset()
 
@@ -17,6 +18,8 @@ startScreen.Enabled = true
 local TS = game:GetService("TweenService")
 local startButtonDeb = true
 
+hbs.hoverAllTextButtons()
+
 local function startAndLoadLetters(settings)
     if settings == nil then warn("please provide settings dict!"); return end
     local timeAmt = settings.Time
@@ -30,7 +33,9 @@ local function startAndLoadLetters(settings)
     cas:BindAction(
         "pressI",
         function(actionName,inputState,inputObject)
-            typingFunc.detectedKeyInput(inputObject,false)
+            if inputState == Enum.UserInputState.Begin then
+                typingFunc.detectedKeyInput(inputObject,false)
+            end
         end,
         false,
         Enum.KeyCode.I
@@ -38,7 +43,9 @@ local function startAndLoadLetters(settings)
     cas:BindAction(
         "pressO",
         function(actionName,inputState,inputObject)
-            typingFunc.detectedKeyInput(inputObject,false)
+            if inputState == Enum.UserInputState.Begin then
+                typingFunc.detectedKeyInput(inputObject,false)
+            end
         end,
         false,
         Enum.KeyCode.O
@@ -87,6 +94,11 @@ function getUsernameFromUserId(userId) -- copied from roblox docs lol
 	return name
 end
 
+local function round(num, numDecimalPlaces)
+    local mult = 10^(numDecimalPlaces or 0)
+    return math.floor(num * mult + 0.5) / mult
+end
+
 local baseFrame = RS.GuiObjs.Leaderboard.PlayerFrame
 local function loadGlobalLeaderboardGui()
     for i,v in pairs(startScreen.Parent.GlobalGui.ScrollingFrame:GetChildren()) do
@@ -102,8 +114,10 @@ local function loadGlobalLeaderboardGui()
     for i,v in ipairs(globalLeaderboard) do
         local newFrame = baseFrame:Clone()
         newFrame.Name = tostring(i)
-        newFrame.WPM.Text = v.WPM
-        newFrame.LPM.Text = v.LPM
+        newFrame.WPM.Text = round(v.WPM, 2)
+        newFrame.LPM.Text = round(v.LPM, 2)
+        newFrame.WPM.TextSize = 100/(#newFrame.WPM.Text)
+        newFrame.LPM.TextSize = 100/(#newFrame.LPM.Text)
         newFrame.Pos.Text = newFrame.Name
         newFrame.PlayerName.Text = getUsernameFromUserId(v.PlayerId)
         if newFrame.PlayerName.Text == game.Players.LocalPlayer.Name then
@@ -131,6 +145,7 @@ local function loadFriendsLeaderboardGui()
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.BackgroundTransparency = 1
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.BackgroundTransparency = 1
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.TextTransparency = 1
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.Active = false
     local plsClear = RS.GuiObjs.Leaderboard.PlsClear:Clone()
     plsClear.Parent = startScreen.Parent.FriendsGui.ScrollingFrame
     guiEr.DisableUI({startScreen.Parent.FriendsGui})
@@ -140,8 +155,10 @@ local function loadFriendsLeaderboardGui()
     for i,v in ipairs(friendsLeaderboard) do
         local newFrame = baseFrame:Clone()
         newFrame.Name = tostring(i)
-        newFrame.WPM.Text = v.WPM
-        newFrame.LPM.Text = v.LPM
+        newFrame.WPM.Text = round(v.WPM, 2)
+        newFrame.LPM.Text = round(v.LPM, 2)
+        newFrame.WPM.TextSize = 100/(#newFrame.WPM.Text)
+        newFrame.LPM.TextSize = 100/(#newFrame.LPM.Text)
         newFrame.Pos.Text = newFrame.Name
         newFrame.PlayerName.Text = getUsernameFromUserId(v.PlayerId)
         if newFrame.PlayerName.Text == game.Players.LocalPlayer.Name then
@@ -155,6 +172,7 @@ local function loadFriendsLeaderboardGui()
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.BackgroundTransparency = 0
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.BackgroundTransparency = 0
     startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.TextTransparency = 0
+    startScreen.Parent.FriendsGui.ScrollingFrame.FriendsInvite.TextButton.Active = true
 end
 
 local function invokeInviteFriends()
